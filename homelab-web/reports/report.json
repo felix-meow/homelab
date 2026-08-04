@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-07-24T23:21:48.536154",
+  "score": 70,
+  "max_score": 100,
+  "findings": [
+    {
+      "type": "Reply-To",
+      "severity": "MEDIUM",
+      "message": "Reply-To differs from From: evil.com vs bank.com"
+    },
+    {
+      "type": "Suspicious URL",
+      "severity": "HIGH",
+      "message": "Suspicious URL: http://fake-bank.tk/verify",
+      "url_info": {
+        "url": "http://fake-bank.tk/verify",
+        "suspicious": true,
+        "reasons": [
+          "Suspicious TLD: .tk"
+        ]
+      }
+    },
+    {
+      "type": "Suspicious Keywords",
+      "severity": "MEDIUM",
+      "message": "Suspicious keywords: verify, account, bank, urgent"
+    },
+    {
+      "type": "Urgent Language",
+      "severity": "MEDIUM",
+      "message": "Urgency indicator: \"urgent\""
+    }
+  ],
+  "suspicious": true,
+  "headers": {
+    "score": 15,
+    "findings": [
+      {
+        "type": "Reply-To",
+        "severity": "MEDIUM",
+        "message": "Reply-To differs from From: evil.com vs bank.com"
+      }
+    ],
+    "spf": "unknown",
+    "dkim": "unknown",
+    "dmarc": "unknown"
+  },
+  "urls": {
+    "score": 25,
+    "findings": [
+      {
+        "type": "Suspicious URL",
+        "severity": "HIGH",
+        "message": "Suspicious URL: http://fake-bank.tk/verify",
+        "url_info": {
+          "url": "http://fake-bank.tk/verify",
+          "suspicious": true,
+          "reasons": [
+            "Suspicious TLD: .tk"
+          ]
+        }
+      }
+    ],
+    "urls": [
+      {
+        "url": "http://fake-bank.tk/verify",
+        "suspicious": true,
+        "reasons": [
+          "Suspicious TLD: .tk"
+        ]
+      }
+    ]
+  },
+  "content": {
+    "score": 30,
+    "findings": [
+      {
+        "type": "Suspicious Keywords",
+        "severity": "MEDIUM",
+        "message": "Suspicious keywords: verify, account, bank, urgent"
+      },
+      {
+        "type": "Urgent Language",
+        "severity": "MEDIUM",
+        "message": "Urgency indicator: \"urgent\""
+      }
+    ],
+    "keywords": [
+      "verify",
+      "account",
+      "bank",
+      "urgent"
+    ]
+  }
+}

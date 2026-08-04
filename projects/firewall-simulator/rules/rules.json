@@ -1,0 +1,57 @@
+[
+  {
+    "id": 1,
+    "name": "Allow HTTP",
+    "action": "allow",
+    "protocol": "tcp",
+    "src_ip": "*",
+    "dst_ip": "*",
+    "src_port": "*",
+    "dst_port": "80",
+    "priority": 10
+  },
+  {
+    "id": 2,
+    "name": "Allow HTTPS",
+    "action": "allow",
+    "protocol": "tcp",
+    "src_ip": "*",
+    "dst_ip": "*",
+    "src_port": "*",
+    "dst_port": "443",
+    "priority": 10
+  },
+  {
+    "id": 3,
+    "name": "Allow SSH",
+    "action": "allow",
+    "protocol": "tcp",
+    "src_ip": "192.168.1.0/24",
+    "dst_ip": "*",
+    "src_port": "*",
+    "dst_port": "22",
+    "priority": 10
+  },
+  {
+    "id": 4,
+    "name": "Block all",
+    "action": "deny",
+    "protocol": "*",
+    "src_ip": "*",
+    "dst_ip": "*",
+    "src_port": "*",
+    "dst_port": "*",
+    "priority": 100
+  },
+  {
+    "name": "Block SSH",
+    "action": "deny",
+    "protocol": "tcp",
+    "src_ip": "*",
+    "dst_ip": "*",
+    "src_port": "*",
+    "dst_port": "22",
+    "priority": 5,
+    "id": 5
+  }
+]

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Scanner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; display: flex; justify-content: center; padding: 2rem; }
+        .container { max-width: 800px; width: 100%; }
+        .back { display: inline-block; color: #7b2fbe; text-decoration: none; margin-bottom: 1rem; }
+        .back:hover { text-decoration: underline; }
+        h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+        .sub { color: #888; margin-bottom: 2rem; }
+        .card { background: #14141f; border: 1px solid #1f1f32; border-radius: 16px; padding: 2rem; }
+        label { display: block; font-weight: 600; margin: 1rem 0 0.25rem; }
+        input { width: 100%; padding: 0.75rem; background: #0a0a0f; border: 1px solid #1f1f32; border-radius: 8px; color: #e0e0e0; font-size: 1rem; }
+        input:focus { border-color: #7b2fbe; outline: none; }
+        .row { display: flex; gap: 1rem; }
+        .row > * { flex: 1; }
+        button { background: linear-gradient(135deg, #7b2fbe, #00d4ff); border: none; color: white; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1.5rem; transition: opacity 0.3s; }
+        button:hover { opacity: 0.8; }
+        #output { background: #0a0a0f; border: 1px solid #1f1f32; border-radius: 8px; padding: 1rem; margin-top: 1rem; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; display: none; }
+        #output.show { display: block; }
+        .loading { display: none; color: #888; margin-top: 1rem; }
+        .loading.show { display: block; }
+        .error { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back">← Dashboard</a>
+        <h1>🔌 Port Scanner</h1>
+        <p class="sub">Scanează porturi TCP pe o țintă</p>
+        <div class="card">
+            <div class="row">
+                <div>
+                    <label for="host">Host / IP</label>
+                    <input type="text" id="host" placeholder="ex: scanme.nmap.org" value="scanme.nmap.org">
+                </div>
+                <div>
+                    <label for="ports">Porturi</label>
+                    <input type="text" id="ports" placeholder="1-1024" value="1-1024">
+                </div>
+            </div>
+            <button onclick="runScan()">▶ Start Scan</button>
+            <div class="loading" id="loading">⏳ Scanare în curs...</div>
+            <pre id="output"></pre>
+        </div>
+    </div>
+    <script>
+        async function runScan() {
+            const host = document.getElementById('host').value.trim();
+            const ports = document.getElementById('ports').value.trim();
+            const output = document.getElementById('output');
+            const loading = document.getElementById('loading');
+            if (!host) { alert('Te rog să introduci un host/IP.'); return; }
+            output.classList.remove('show');
+            loading.classList.add('show');
+            try {
+                const response = await fetch('/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ host, ports })
+                });
+                const data = await response.json();
+                output.textContent = data.output || data.error || 'Fără rezultate.';
+                if (data.error) output.classList.add('error');
+                output.classList.add('show');
+            } catch (err) {
+                output.textContent = 'Eroare: ' + err.message;
+                output.classList.add('show', 'error');
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+        document.addEventListener('keydown', (e) => { if (e.key === 'Enter') runScan(); });
+    </script>
+</body>
+</html>

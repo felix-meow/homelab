@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keylogger Detector</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; display: flex; justify-content: center; padding: 2rem; }
+        .container { max-width: 800px; width: 100%; }
+        .back { display: inline-block; color: #7b2fbe; text-decoration: none; margin-bottom: 1rem; }
+        .back:hover { text-decoration: underline; }
+        h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+        .sub { color: #888; margin-bottom: 2rem; }
+        .card { background: #14141f; border: 1px solid #1f1f32; border-radius: 16px; padding: 2rem; }
+        button { background: linear-gradient(135deg, #7b2fbe, #00d4ff); border: none; color: white; padding: 0.75rem 2rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1.5rem; transition: opacity 0.3s; }
+        button:hover { opacity: 0.8; }
+        #output { background: #0a0a0f; border: 1px solid #1f1f32; border-radius: 8px; padding: 1rem; margin-top: 1rem; white-space: pre-wrap; font-family: monospace; max-height: 400px; overflow-y: auto; display: none; }
+        #output.show { display: block; }
+        .loading { display: none; color: #888; margin-top: 1rem; }
+        .loading.show { display: block; }
+        .error { color: #ff6b6b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back">← Dashboard</a>
+        <h1>⌨️ Keylogger Detector</h1>
+        <p class="sub">Detectează keylogger-i și spyware</p>
+        <div class="card">
+            <p style="color:#888;margin-bottom:1rem;">Scanează procese, fișiere și conexiuni de rețea pentru keylogger-i.</p>
+            <button onclick="runKeylog()">▶ Start Scan</button>
+            <div class="loading" id="loading">⏳ Scanare în curs (poate dura 1-2 minute)...</div>
+            <pre id="output"></pre>
+        </div>
+    </div>
+    <script>
+        async function runKeylog() {
+            const output = document.getElementById('output');
+            const loading = document.getElementById('loading');
+            output.classList.remove('show');
+            loading.classList.add('show');
+            try {
+                const response = await fetch('/api/keylog', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                output.textContent = data.output || data.error || 'Fără rezultate.';
+                if (data.error) output.classList.add('error');
+                output.classList.add('show');
+            } catch (err) {
+                output.textContent = 'Eroare: ' + err.message;
+                output.classList.add('show', 'error');
+            } finally {
+                loading.classList.remove('show');
+            }
+        }
+    </script>
+</body>
+</html>

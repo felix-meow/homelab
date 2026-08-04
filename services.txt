@@ -1,0 +1,47 @@
+# Homelab - Servicii si Porturi" > ~/homelab/services.txt
+---
+echo "" >> ~/homelab/services.txt
+echo "# --- Servicii Active (Docker) ---" >> ~/homelab/services.txt
+echo "n8n:            http://localhost:5678" >> ~/homelab/services.txt
+echo "OpenCut:        http://localhost:3000" >> ~/homelab/services.txt
+echo "Ollama:         http://localhost:11434" >> ~/homelab/services.txt
+echo "PostgreSQL:     localhost:5432" >> ~/homelab/services.txt
+echo "Redis:          localhost:6379" >> ~/homelab/services.txt
+---
+echo "" >> ~/homelab/services.txt
+echo "# --- Proiecte Homelab ---" >> ~/homelab/services.txt
+echo "Encrypted Chat: localhost:5000 (server)" >> ~/homelab/services.txt
+---
+echo "" >> ~/homelab/services.txt
+echo "# --- Directoare Proiecte ---" >> ~/homelab/services.txt
+echo "Port Scanner:           ~/homelab/projects/port-scanner/" >> ~/homelab/services.txt
+
+echo "Packet Sniffer:         ~/homelab/projects/packet-sniffer/" >> ~/homelab/services.txt
+echo "  - Output:             ~/homelab/projects/packet-sniffer/output/" >> ~/homelab/services.txt
+echo "  - Alerts:             ~/homelab/projects/packet-sniffer/alerts/" >> ~/homelab/services.txt
+
+echo "File Integrity Monitor: ~/homelab/projects/file-integrity-monitor/" >> ~/homelab/services.txt
+
+echo "Web Vuln Scanner:       ~/homelab/projects/web-vuln-scanner/" >> ~/homelab/services.txt
+echo "  - Reports:            ~/homelab/projects/web-vuln-scanner/reports/" >> ~/homelab/services.txt
+
+echo "IDS:                    ~/homelab/projects/ids/" >> ~/homelab/services.txt
+echo "  - Alerts:             ~/homelab/projects/ids/alerts/" >> ~/homelab/services.txt
+echo "  - Reports:            ~/homelab/projects/ids/reports/" >> ~/homelab/services.txt
+
+echo "Password Cracker:       ~/homelab/projects/password-cracker/" >> ~/homelab/services.txt
+echo "  - Reports:            ~/homelab/projects/password-cracker/reports/" >> ~/homelab/services.txt
+
+echo "Phishing Detector:      ~/homelab/projects/phishing-detector/" >> ~/homelab/services.txt
+echo "  - Reports:            ~/homelab/projects/phishing-detector/reports/" >> ~/homelab/services.txt
+
+echo "Firewall Simulator:     ~/homelab/projects/firewall-simulator/" >> ~/homelab/services.txt
+echo "  - Rules:              ~/homelab/projects/firewall-simulator/rules/" >> ~/homelab/services.txt
+echo "  - Logs:               ~/homelab/projects/firewall-simulator/logs/" >> ~/homelab/services.txt
+echo "  - Reports:            ~/homelab/projects/firewall-simulator/reports/" >> ~/homelab/services.txt
+
+echo "Encrypted Chat:         ~/homelab/projects/encrypted-chat/" >> ~/homelab/services.txt
+echo "  - Logs:               ~/homelab/projects/encrypted-chat/logs/" >> ~/homelab/services.txt
+
+echo "Keylogger Detector:     ~/homelab/projects/keylogger-detector/" >> ~/homelab/services.txt
+echo "  - Reports:            ~/homelab/projects/keylogger-detector/reports/" >> ~/homelab/services.txt
