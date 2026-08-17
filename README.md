@@ -33,19 +33,18 @@ homelab/
 ├── README.md
 ├── requirements.txt
 ├── projects/
-│   ├── port-scanner/              # 1. Port Scanner
-│   ├── packet-sniffer/            # 2. Packet Sniffer
-│   ├── file-integrity-monitor/    # 3. File Integrity Monitor
-│   ├── web-vuln-scanner/          # 4. Web Vulnerability Scanner
-│   ├── ids/                       # 5. Intrusion Detection System
-│   ├── password-cracker/          # 6. Password Cracker
-│   ├── phishing-detector/         # 7. Phishing Detector
-│   ├── firewall-simulator/        # 8. Firewall Simulator
-│   ├── encrypted-chat/            # 9. Encrypted Chat
-│   └── keylogger-detector/        # 10. Keylogger Detector
-├── homelab-web/                   # Web dashboard (Flask)
+│   ├── port-scanner/
+│   ├── packet-sniffer/
+│   ├── file-integrity-monitor/
+│   ├── web-vuln-scanner/
+│   ├── ids/
+│   ├── password-cracker/
+│   ├── phishing-detector/
+│   ├── firewall-simulator/
+│   ├── encrypted-chat/
+│   └── keylogger-detector/
 └── docs/
-    └── incident-response/         # Playbooks and templates
+    └── incident-response/
 
 ---
 
