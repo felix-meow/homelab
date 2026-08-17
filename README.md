@@ -28,7 +28,7 @@ Goals:
 ---
 
 ## Structure
-
+```
 homelab/
 ├── README.md
 ├── requirements.txt
@@ -45,7 +45,7 @@ homelab/
 │   └── keylogger-detector/
 └── docs/
     └── incident-response/
-
+```
 ---
 
 ## Projects
