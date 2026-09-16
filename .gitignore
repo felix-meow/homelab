@@ -1,0 +1,27 @@
+# Local agent / editor state
+.claude/
+.cc-writes/
+.idea/
+.vscode/
+.mcp.json
+
+# Shell / user dotfiles (must never be committed)
+.bashrc
+.bash_profile
+.profile
+.zshrc
+.zprofile
+.gitconfig
+.ripgreprc
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Archives / build junk
+*.zip
+
+# Internal working docs (not for public repo)
+docs/upwork/
