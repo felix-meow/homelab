@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-09-16T17:59:50.822379",
+  "score": 100,
+  "max_score": 100,
+  "findings": [
+    {
+      "type": "SPF",
+      "severity": "HIGH",
+      "message": "SPF check did not pass (fail)"
+    },
+    {
+      "type": "DKIM",
+      "severity": "HIGH",
+      "message": "DKIM check did not pass (fail)"
+    },
+    {
+      "type": "DMARC",
+      "severity": "HIGH",
+      "message": "DMARC check did not pass (fail)"
+    },
+    {
+      "type": "Reply-To Mismatch",
+      "severity": "MEDIUM",
+      "message": "Reply-To differs from From: secure-bofa-login.ga vs bankofamerica.com"
+    },
+    {
+      "type": "Suspicious URL",
+      "severity": "HIGH",
+      "message": "Suspicious URL: http://bankofam\u0435ri\u0441a.com/account?id=xq5a1b5m",
+      "url_info": {
+        "url": "http://bankofam\u0435ri\u0441a.com/account?id=xq5a1b5m",
+        "suspicious": true,
+        "reasons": [
+          "Homoglyph characters detected (looks like \"bankofamerica.com\")",
+          "Non-ASCII characters in domain"
+        ]
+      }
+    },
+    {
+      "type": "Suspicious Keywords",
+      "severity": "MEDIUM",
+      "message": "Suspicious keywords: account, login, bank, urgent, suspicious"
+    },
+    {
+      "type": "Urgent Language",
+      "severity": "MEDIUM",
+      "message": "Urgency indicator: \"urgent\""
+    }
+  ],
+  "suspicious": true
+}

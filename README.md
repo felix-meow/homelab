@@ -1,6 +1,6 @@
 # Cybersecurity Homelab
 
-A complete cybersecurity portfolio built from scratch. Includes 10 custom Python security tools, a unified web dashboard, and integration with various security technologies.
+A complete cybersecurity portfolio built from scratch. Includes custom Python security tools spanning both **blue-team** (defensive) and **red-team** (offensive) sides, built as pairs so each attack tool validates its defensive counterpart, plus integration with various security technologies.
 
 ---
 
@@ -33,16 +33,21 @@ homelab/
 ├── README.md
 ├── requirements.txt
 ├── projects/
-│   ├── port-scanner/
-│   ├── packet-sniffer/
-│   ├── file-integrity-monitor/
-│   ├── web-vuln-scanner/
-│   ├── ids/
-│   ├── password-cracker/
-│   ├── phishing-detector/
-│   ├── firewall-simulator/
-│   ├── encrypted-chat/
-│   └── keylogger-detector/
+│   ├── port-scanner/            # (defensive/recon)
+│   ├── packet-sniffer/          # (defensive)
+│   ├── file-integrity-monitor/  # (defensive)
+│   ├── web-vuln-scanner/        # (recon)  <-> waf-simulator
+│   ├── ids/                     # (defensive) <-> ddos-simulator, mitm-proxy
+│   ├── password-cracker/        # (offensive)
+│   ├── phishing-detector/       # (defensive) <-> phishing-kit
+│   ├── firewall-simulator/      # (defensive) <-> ddos-simulator
+│   ├── encrypted-chat/          # (defensive)
+│   ├── keylogger-detector/      # (defensive) <-> keylogger
+│   ├── keylogger/               # (offensive, on hold)
+│   ├── phishing-kit/            # (offensive)
+│   ├── waf-simulator/           # (defensive)
+│   ├── ddos-simulator/          # (offensive, lab-scoped)
+│   └── mitm-proxy/              # (offensive, LAN-local)
 └── docs/
     └── incident-response/
 ```
@@ -79,6 +84,28 @@ End-to-end encrypted chat (AES-128).
 
 10. Keylogger Detector
 Detection of keyloggers and spyware.
+
+---
+
+## Red Team vs Blue Team
+
+Offensive tools are built to validate their defensive counterparts in an
+isolated homelab. They are for educational and demonstrative use only; the
+network-facing ones are lab-scoped or gated behind an explicit authorization
+flag.
+
+| Offensive (Red) | Defensive (Blue) | What it validates |
+|-----------------|------------------|-------------------|
+| Phishing Kit | Phishing Detector | Spoofed headers, homoglyph URLs, urgency scoring |
+| DDoS Simulator | IDS / Firewall Simulator | SYN flood, port scan, ICMP flood, DNS burst detection |
+| MITM Proxy | Packet Sniffer / IDS (IDS-005) | ARP spoofing detection |
+| Web Vuln Scanner | WAF Simulator | XSS / SQLi / LFI / cmd-injection blocking |
+| Keylogger *(on hold)* | Keylogger Detector | Behavioral keylogger detection |
+
+**Safety guardrails:** the DDoS Simulator refuses any non-lab target (only
+loopback + RFC1918 private ranges); the MITM Proxy requires `--i-own-this-target`
+and prints a warning; the Phishing Kit only writes clearly-labelled synthetic
+files and sends nothing.
 
 ---
 
