@@ -1,0 +1,39 @@
+# Elasticsearch / KQL queries derived from the Sigma rules.
+#
+# IMPORTANT: a plain query language (Lucene/KQL) matches the BASE EVENTS only.
+# The detection logic is *threshold over time* (e.g. 10 distinct ports / 10s),
+# which is stateful and CANNOT be expressed by a single query. In an ELK/EDR
+# stack you implement the threshold with either:
+#   - a Kibana "Threshold" detection rule (group by + count/cardinality), or
+#   - a Watcher / transform running a date_histogram + terms aggregation.
+# The base filter selects the events; the rule engine counts them.
+
+# --- IDS-001 Port Scan (T1046) ---
+# Base filter (SYN events):
+event_type:"SYN"
+# Threshold rule: group by src_ip, dst_ip  ->  cardinality(dst_port) >= 10 over 10s
+
+# --- IDS-002 Brute Force SSH/FTP (T1110) ---
+# Base filter (connections to auth services):
+event_type:"SYN" and dst_port:(21 or 22)
+# Threshold rule: group by src_ip, dst_ip, dst_port  ->  count() >= 5 over 30s
+# (network-visible connection rate; pair with auth.log for true failures)
+
+# --- IDS-003 ICMP Flood (T1498) ---
+# Base filter:
+event_type:"ICMP"
+# Threshold rule: group by src_ip  ->  count() >= 10 over 5s
+
+# --- IDS-004 SYN Flood (T1499 / T1498) ---
+# Base filter:
+event_type:"SYN"
+# Threshold rule: group by src_ip  ->  count() >= 20 over 5s
+
+# --- IDS-006 DNS Amplification (T1498.002) ---
+# Base filter (large responses from DNS):
+src_port:53 and response_size >= 200
+# Threshold rule: group by dst_ip  ->  count() >= 10 over 5s
+
+# --- IDS-005 ARP Spoofing (T1557.002) ---
+# Not query-expressible: requires stateful comparison of an IP's advertised MAC
+# against a known baseline (a change = alert). Handled in the IDS engine, not here.

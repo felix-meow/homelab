@@ -1,0 +1,50 @@
+# Base event + correlation. A single SYN is benign; a scan is *many distinct
+# destination ports* from one source in a short window. That threshold logic
+# lives in the correlation rule below (Sigma correlation spec).
+title: TCP SYN to Destination Port
+name: ids_syn_packet
+status: experimental
+description: Building-block event - one inbound TCP SYN observed toward a host.
+author: Robert Mircea
+date: 2026/09/09
+modified: 2026/09/28
+logsource:
+    category: network_connection
+    product: linux
+detection:
+    selection:
+        event_type: 'SYN'
+    condition: selection
+level: informational
+tags:
+    - attack.discovery
+    - attack.t1046
+---
+title: Port Scan Detection
+id: 00000000-0000-0000-0000-000000000001
+status: experimental
+description: >
+    Detects port scanning: a single source contacting many DISTINCT
+    destination ports on the same host within a short window. Mirrors IDS-001
+    (>=10 distinct ports / 10s).
+author: Robert Mircea
+date: 2026/09/09
+modified: 2026/09/28
+correlation:
+    type: value_count
+    rules:
+        - ids_syn_packet
+    group-by:
+        - src_ip
+        - dst_ip
+    timespan: 10s
+    condition:
+        gte: 10
+        field: dst_port
+level: high
+falsepositives:
+    - Vulnerability scanners / asset inventory tools (Nessus, Qualys)
+    - Legitimate service-discovery from monitoring hosts (whitelist their IPs)
+tags:
+    - attack.discovery
+    - attack.t1046

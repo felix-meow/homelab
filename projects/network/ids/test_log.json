@@ -1,0 +1,5 @@
+{"event_type": "SYN", "dst_port": 22, "src_ip": "172.17.156.200", "timestamp": "2026-09-09T20:00:00"}
+{"event_type": "SYN", "dst_port": 80, "src_ip": "172.17.156.200", "timestamp": "2026-09-09T20:00:01"}
+{"event_type": "SYN", "dst_port": 443, "src_ip": "172.17.156.200", "timestamp": "2026-09-09T20:00:02"}
+{"event_type": "ICMP", "src_ip": "172.17.156.200", "timestamp": "2026-09-09T20:00:03"}
+{"event_type": "SYN", "dst_port": 25, "src_ip": "172.17.156.200", "timestamp": "2026-09-09T20:00:04"}

@@ -1,0 +1,20 @@
+# Quick-reference base filters (KQL). These select the base EVENTS only;
+# the alert fires on a threshold over time, applied by a SIEM threshold rule
+# or aggregation (see elasticsearch_queries.txt for the group-by/count details).
+
+# IDS-001: Port Scan (T1046) — then: cardinality(dst_port) >= 10 / 10s per src+dst
+event_type:"SYN"
+
+# IDS-002: Brute Force SSH/FTP (T1110) — then: count() >= 5 / 30s per src+dst+port
+event_type:"SYN" and dst_port:(21 or 22)
+
+# IDS-003: ICMP Flood (T1498) — then: count() >= 10 / 5s per src
+event_type:"ICMP"
+
+# IDS-004: SYN Flood (T1499/T1498) — then: count() >= 20 / 5s per src
+event_type:"SYN"
+
+# IDS-006: DNS Amplification (T1498.002) — then: count() >= 10 / 5s per dst
+src_port:53 and response_size >= 200
+
+# IDS-005: ARP Spoofing (T1557.002) — stateful (MAC change), handled in the IDS engine
