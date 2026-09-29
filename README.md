@@ -53,8 +53,9 @@ homelab/
 │       ├── password-cracker/         # (offensive)
 │       ├── encrypted-chat/           # (defensive)
 │       └── file-integrity-monitor/   # (defensive)
-└── docs/
-    └── incident-response/
+├── incident-response/                # IR playbook (port scan)
+├── n8n-workflows/                    # SOAR: IDS alert -> TheHive
+└── webpanel/                         # web UI to run/observe the tools
 ```
 ---
 
