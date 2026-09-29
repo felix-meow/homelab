@@ -217,7 +217,7 @@ def scan(whitelist, verbose=False):
 
 def generate_report(findings, report_dir=None):
     """Write scan findings to <report_dir>/report.json (robust to read-only FS)."""
-    report_dir = report_dir or os.environ.get("REPORT_DIR", "reports")
+    report_dir = report_dir or os.environ.get("REPORT_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
     report = {
         "timestamp": datetime.now().isoformat(),
         "total_findings": len(findings),
