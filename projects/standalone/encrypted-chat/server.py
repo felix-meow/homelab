@@ -52,7 +52,7 @@ class ChatServer:
         self.room_keys = {}
         self.key = generate_key(password)
         self.running = True
-        os.makedirs('logs', exist_ok=True)
+        os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs'), exist_ok=True)
 
     def get_room_key(self, room):
         """Return the shared session key for a room, creating it if needed."""

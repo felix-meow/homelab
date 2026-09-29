@@ -39,7 +39,7 @@ class PacketSniffer:
         self.raw_packets = []
         self.count = 0
         self.suspicious = []
-        self.output_dir = "output"
+        self.output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
         self.pcap_file = pcap_file
         # ARP table (IP -> MAC) for spoof detection.
         self.arp_table = {}

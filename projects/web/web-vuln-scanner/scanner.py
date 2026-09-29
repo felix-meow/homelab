@@ -352,7 +352,8 @@ class WebScanner:
 
     def generate_report(self):
         """Generate a JSON report of the scan results."""
-        os.makedirs("reports", exist_ok=True)
+        _rep = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+        os.makedirs(_rep, exist_ok=True)
 
         report = {
             "target": self.target_url,
@@ -365,7 +366,7 @@ class WebScanner:
             "vulnerabilities": self.vulnerabilities
         }
 
-        with open("reports/report.json", "w") as f:
+        with open(os.path.join(_rep, "report.json"), "w") as f:
             json.dump(report, f, indent=2)
 
         print("\n" + "=" * 50)

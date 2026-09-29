@@ -220,7 +220,8 @@ class PasswordCracker:
 
     def _generate_report(self, target_hash, result, algorithm, method, elapsed):
         """Generate a JSON report of the cracking attempt."""
-        os.makedirs("reports", exist_ok=True)
+        _rep = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+        os.makedirs(_rep, exist_ok=True)
 
         report = {
             "timestamp": datetime.now().isoformat(),
@@ -234,7 +235,7 @@ class PasswordCracker:
             "time_elapsed": round(elapsed, 2),
         }
 
-        with open("reports/report.json", "w") as f:
+        with open(os.path.join(_rep, "report.json"), "w") as f:
             json.dump(report, f, indent=2)
 
         print("\n[REPORT] Saved: reports/report.json")

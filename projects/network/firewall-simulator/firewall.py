@@ -18,7 +18,10 @@ from collections import defaultdict
 class Firewall:
     """Firewall simulator with rule-based packet filtering."""
 
-    def __init__(self, rules_file='rules/rules.json'):
+    def __init__(self, rules_file=None):
+        if rules_file is None:
+            rules_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rules', 'rules.json')
+        self.rules_file = rules_file
         self.rules = self._load_rules(rules_file)
         self.logs = []
         self.stats = {
@@ -51,7 +54,7 @@ class Firewall:
              'src_ip': '*', 'dst_ip': '*', 'src_port': '*', 'dst_port': '*', 'priority': 100}
         ]
 
-        os.makedirs('rules', exist_ok=True)
+        os.makedirs(os.path.dirname(rules_file), exist_ok=True)
         with open(rules_file, 'w') as f:
             json.dump(default_rules, f, indent=2)
 
@@ -59,7 +62,7 @@ class Firewall:
 
     def _save_rules(self):
         """Save current rules to JSON file."""
-        with open('rules/rules.json', 'w') as f:
+        with open(self.rules_file, 'w') as f:
             json.dump(self.rules, f, indent=2)
 
     def add_rule(self, rule):
@@ -258,7 +261,8 @@ class Firewall:
 
     def generate_report(self):
         """Generate a detailed firewall report."""
-        os.makedirs('reports', exist_ok=True)
+        _rep = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'reports')
+        os.makedirs(_rep, exist_ok=True)
 
         top_src = sorted(self.src_talkers.items(), key=lambda x: x[1], reverse=True)[:5]
         top_dst = sorted(self.dst_talkers.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -274,7 +278,7 @@ class Firewall:
             'recent_logs': self.logs[-10:]
         }
 
-        with open('reports/report.json', 'w') as f:
+        with open(os.path.join(_rep, 'report.json'), 'w') as f:
             json.dump(report, f, indent=2)
 
         print("\n" + "=" * 50)
