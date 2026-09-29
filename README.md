@@ -91,6 +91,21 @@ End-to-end encrypted chat (AES-128).
 10. Keylogger Detector
 Detection of keyloggers and spyware.
 
+11. MITM Proxy
+ARP-spoofing man-in-the-middle for LAN traffic interception (lab-scoped).
+
+12. DDoS / Attack-Traffic Simulator
+Generates SYN/ICMP/DNS flood and port-scan traffic to exercise detections (lab-safe).
+
+13. WAF Simulator
+Web application firewall blocking XSS, SQLi, LFI, and command injection.
+
+14. Phishing Kit
+Phishing email / test-case generator for tuning the detector (sends nothing).
+
+15. Keylogger
+Keystroke logger (offensive; paired with the detector; on hold).
+
 ---
 
 ## Red Team vs Blue Team
