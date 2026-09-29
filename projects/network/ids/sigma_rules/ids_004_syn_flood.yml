@@ -1,0 +1,26 @@
+title: SYN Flood Detection
+id: 00000000-0000-0000-0000-000000000004
+status: experimental
+description: >
+    Detects SYN flooding (DoS): a very high rate of SYN packets from one source
+    in a short window. Reuses the ids_syn_packet base event from IDS-001.
+    Mirrors IDS-004 (>=20 SYN / 5s).
+author: Robert Mircea
+date: 2026/09/28
+correlation:
+    type: event_count
+    rules:
+        - ids_syn_packet
+    group-by:
+        - src_ip
+    timespan: 5s
+    condition:
+        gte: 20
+level: high
+falsepositives:
+    - High-traffic legitimate clients behind NAT (many connections from one IP)
+    - Load testing
+tags:
+    - attack.impact
+    - attack.t1499
+    - attack.t1498

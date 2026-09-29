@@ -23,5 +23,53 @@ __pycache__/
 # Archives / build junk
 *.zip
 
-# Internal working docs (not for public repo)
-docs/upwork/
+# Internal working docs (not for public repo) - strategy, income, handoff, hardening log
+docs/
+
+# --- Sensitive / private (NEVER commit — public remote) ---
+telegram-shop-bot/
+telegram-bot/
+database/
+wallet_data/
+*.db
+*_key.txt
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+!*.template
+
+# --- Runtime artifacts ---
+reports/
+output/
+samples/
+logs/
+*.log
+projects/*/reports/
+projects/*/output/
+projects/*/samples/
+projects/*/logs/
+projects/*/database/
+projects/*/alerts/
+
+# --- Keylogger capture artifacts (NEVER commit — real keystrokes) ---
+keylog*.txt
+keystrokes*
+captured_keys*
+*.keys
+session.dat
+
+# --- Editor / iteration backups (working junk) ---
+*.bak
+*.orig
+*~
+
+# --- Packet captures ---
+*.pcap
+*.pcapng
+
+# Stray root test/scratch (not tools)
+/test_rule.yml
+/rules/
+projects/keylogger/keylogger/notes.py

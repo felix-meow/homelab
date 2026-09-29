@@ -1,0 +1,46 @@
+# Amplification abuse = many LARGE DNS responses (src port 53) toward one
+# victim. The size filter lives in the base event; the volume threshold in the
+# correlation. Mirrors IDS-006 (>=10 responses of 200B+ / 5s).
+title: Large DNS Response
+name: ids_large_dns_response
+status: experimental
+description: Building-block event - a DNS response (src port 53) larger than 200 bytes.
+author: Robert Mircea
+date: 2026/09/28
+logsource:
+    category: dns
+    product: linux
+detection:
+    selection:
+        src_port: 53
+    size_filter:
+        response_size|gte: 200
+    condition: selection and size_filter
+level: informational
+tags:
+    - attack.impact
+    - attack.t1498.002
+---
+title: DNS Amplification Detection
+id: 00000000-0000-0000-0000-000000000006
+status: experimental
+description: >
+    Detects DNS amplification: many large DNS responses directed at a single
+    target in a short window. Mirrors IDS-006 (>=10 / 5s).
+author: Robert Mircea
+date: 2026/09/28
+correlation:
+    type: event_count
+    rules:
+        - ids_large_dns_response
+    group-by:
+        - dst_ip
+    timespan: 5s
+    condition:
+        gte: 10
+level: medium
+falsepositives:
+    - Legitimate DNS-heavy applications (DNSSEC, large TXT/zone transfers)
+tags:
+    - attack.impact
+    - attack.t1498.002

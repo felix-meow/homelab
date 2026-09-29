@@ -33,21 +33,26 @@ homelab/
 ├── README.md
 ├── requirements.txt
 ├── projects/
-│   ├── port-scanner/            # (defensive/recon)
-│   ├── packet-sniffer/          # (defensive)
-│   ├── file-integrity-monitor/  # (defensive)
-│   ├── web-vuln-scanner/        # (recon)  <-> waf-simulator
-│   ├── ids/                     # (defensive) <-> ddos-simulator, mitm-proxy
-│   ├── password-cracker/        # (offensive)
-│   ├── phishing-detector/       # (defensive) <-> phishing-kit
-│   ├── firewall-simulator/      # (defensive) <-> ddos-simulator
-│   ├── encrypted-chat/          # (defensive)
-│   ├── keylogger-detector/      # (defensive) <-> keylogger
-│   ├── keylogger/               # (offensive, on hold)
-│   ├── phishing-kit/            # (offensive)
-│   ├── waf-simulator/           # (defensive)
-│   ├── ddos-simulator/          # (offensive, lab-scoped)
-│   └── mitm-proxy/              # (offensive, LAN-local)
+│   ├── keylogger/                    # attack + defense pair
+│   │   ├── keylogger/                # (offensive, on hold)
+│   │   └── keylogger-detector/       # (defensive)
+│   ├── phishing/
+│   │   ├── phishing-kit/             # (offensive)
+│   │   └── phishing-detector/        # (defensive)
+│   ├── web/
+│   │   ├── waf-simulator/            # (defensive)
+│   │   └── web-vuln-scanner/         # (recon / offensive)
+│   ├── network/
+│   │   ├── ddos-simulator/           # (offensive, lab-scoped)
+│   │   ├── mitm-proxy/               # (offensive, LAN-local)
+│   │   ├── ids/                      # (defensive)
+│   │   ├── firewall-simulator/       # (defensive)
+│   │   ├── packet-sniffer/           # (defensive)
+│   │   └── port-scanner/             # (recon)
+│   └── standalone/
+│       ├── password-cracker/         # (offensive)
+│       ├── encrypted-chat/           # (defensive)
+│       └── file-integrity-monitor/   # (defensive)
 └── docs/
     └── incident-response/
 ```
@@ -123,7 +128,7 @@ Install general dependencies:
 pip install -r requirements.txt
 
 For each project, navigate to its folder and install specific dependencies:
-cd projects/port-scanner
+cd projects/network/port-scanner
 pip install -r requirements.txt
 
 ---
@@ -131,13 +136,13 @@ pip install -r requirements.txt
 ## Quick Test
 
 Port Scanner:
-python3 projects/port-scanner/port_scanner.py -H scanme.nmap.org
+python3 projects/network/port-scanner/port_scanner.py -H scanme.nmap.org
 
 Web Vulnerability Scanner:
-python3 projects/web-vuln-scanner/scanner.py -u http://testaspnet.vulnweb.com
+python3 projects/web/web-vuln-scanner/scanner.py -u http://testaspnet.vulnweb.com
 
 Phishing Detector:
-python3 projects/phishing-detector/detector.py -s "Test" -b "http://fake.com"
+python3 projects/phishing/phishing-detector/detector.py -s "Test" -b "http://fake.com"
 
 ---
 

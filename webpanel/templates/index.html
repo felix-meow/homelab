@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homelab Control Panel</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">&#9888;</span>
+      <div>
+        <h1>Homelab Control Panel</h1>
+        <p class="sub">Red &amp; Blue team &middot; acces rapid, output live &middot; <span class="local">127.0.0.1</span></p>
+      </div>
+    </div>
+    <nav class="filters" id="filters">
+      <button class="f active" data-team="all">Toate</button>
+      <button class="f" data-team="red">Red</button>
+      <button class="f" data-team="blue">Blue</button>
+      <button class="f" data-team="recon">Recon</button>
+    </nav>
+  </header>
+
+  <main id="grid" class="grid"><!-- cards injected by app.js --></main>
+
+  <footer class="foot">
+    <span id="count"></span>
+    Comenzile ruleaza local, ca argv (fara shell). Tool-urile ofensive isi pastreaza guardrail-urile.
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

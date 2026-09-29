@@ -1,0 +1,41 @@
+title: ICMP Echo Request
+name: ids_icmp_echo
+status: experimental
+description: Building-block event - one ICMP echo request observed.
+author: Robert Mircea
+date: 2026/09/28
+logsource:
+    category: network_connection
+    product: linux
+detection:
+    selection:
+        event_type: 'ICMP'
+    condition: selection
+level: informational
+tags:
+    - attack.impact
+    - attack.t1498
+---
+title: ICMP Flood Detection
+id: 00000000-0000-0000-0000-000000000003
+status: experimental
+description: >
+    Detects ICMP flooding: a high rate of echo requests from one source in a
+    short window. Mirrors IDS-003 (>=10 ICMP / 5s).
+author: Robert Mircea
+date: 2026/09/28
+correlation:
+    type: event_count
+    rules:
+        - ids_icmp_echo
+    group-by:
+        - src_ip
+    timespan: 5s
+    condition:
+        gte: 10
+level: medium
+falsepositives:
+    - Network monitoring / ping-based availability checks
+tags:
+    - attack.impact
+    - attack.t1498

@@ -1,0 +1,54 @@
+# NOTE: this is NETWORK telemetry, so we count repeated *connections* to an
+# auth service, not authentication failures (we can't see auth results on the
+# wire without decrypting). A high connection rate to 22/21 from one source is
+# the network-visible proxy for brute force. Pair with host auth logs
+# (/var/log/auth.log) for true failure-based detection.
+title: Connection to Authentication Service (SSH/FTP)
+name: ids_auth_connection
+status: experimental
+description: Building-block event - inbound connection attempt to SSH (22) or FTP (21).
+author: Robert Mircea
+date: 2026/09/09
+modified: 2026/09/28
+logsource:
+    category: network_connection
+    product: linux
+detection:
+    selection:
+        event_type: 'SYN'
+        dst_port:
+            - 21
+            - 22
+    condition: selection
+level: informational
+tags:
+    - attack.credential_access
+    - attack.t1110
+---
+title: Brute Force Attempt against SSH/FTP
+id: 00000000-0000-0000-0000-000000000002
+status: experimental
+description: >
+    Detects repeated connections to an auth service from one source in a short
+    window. Mirrors IDS-002 (>=5 attempts / 30s).
+author: Robert Mircea
+date: 2026/09/09
+modified: 2026/09/28
+correlation:
+    type: event_count
+    rules:
+        - ids_auth_connection
+    group-by:
+        - src_ip
+        - dst_ip
+        - dst_port
+    timespan: 30s
+    condition:
+        gte: 5
+level: high
+falsepositives:
+    - CI/CD jobs or backups opening frequent SSH/SFTP sessions
+    - Misconfigured clients retrying connections
+tags:
+    - attack.credential_access
+    - attack.t1110.001
