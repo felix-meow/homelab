@@ -1,33 +1,32 @@
 #!/usr/bin/env python3
 """
-Encrypted Chat - Server
+Encrypted Chat - Server (dumb relay)
 Homelab Project
 
-Multi-client chat server with end-to-end encryption and authentication.
+The server authenticates clients and relays ciphertext within rooms. It does
+NOT derive, hold, or ever see the message-encryption key: that lives only on
+the clients (see utils.py). A compromised/malicious server operator sees only
+sealed Fernet tokens -> true end-to-end encryption.
+
+What the server legitimately knows (metadata, be aware of it):
+  * which usernames/IPs connect, when, and which room they join.
+Hiding that requires an onion/mix transport and is out of scope for this PoC.
 """
 
 import socket
 import threading
 import json
 import os
-import time
-from datetime import datetime
 import sys
 import argparse
+from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from utils import (
-    encrypt_message, decrypt_message, generate_key, hash_password,
-    load_public_key, rsa_encrypt, generate_session_key,
-)
+from utils import hash_password
 
 
 def recv_line(sock):
-    """Read a single newline-terminated line from a socket.
-
-    Returns (line_str, leftover_bytes) where leftover is any data received
-    past the newline (belonging to the next message).
-    """
+    """Read one newline-terminated line. Returns (line_str, leftover_bytes)."""
     buf = b""
     while b"\n" not in buf:
         chunk = sock.recv(1024)
@@ -39,35 +38,23 @@ def recv_line(sock):
 
 
 class ChatServer:
-    """Multi-client encrypted chat server with RSA key exchange and rooms."""
+    """Multi-client relay with password auth and rooms. Holds no crypto keys."""
 
-    def __init__(self, host='0.0.0.0', port=5000, password='chat123'):
+    def __init__(self, host='0.0.0.0', port=5001, password='chat123'):
         self.host = host
         self.port = port
         self.password = password
-        self.clients = {}
-        self.addresses = {}
-        self.client_room = {}
-        # room name -> shared Fernet session key (bytes), created on demand.
-        self.room_keys = {}
-        self.key = generate_key(password)
+        self.clients = {}        # socket -> username
+        self.addresses = {}      # socket -> (ip, port)
+        self.client_room = {}    # socket -> room
         self.running = True
-        os.makedirs(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs'), exist_ok=True)
-
-    def get_room_key(self, room):
-        """Return the shared session key for a room, creating it if needed."""
-        if room not in self.room_keys:
-            self.room_keys[room] = generate_session_key()
-            print(f"[ROOM] Created session key for room '{room}'")
-        return self.room_keys[room]
 
     def broadcast(self, message, sender_socket=None):
-        """Send a message to clients in the sender's room, except the sender."""
+        """Send to clients in the sender's room, except the sender."""
         room = self.client_room.get(sender_socket)
         for client in list(self.clients):
             if client == sender_socket:
                 continue
-            # Only deliver within the same room.
             if room is not None and self.client_room.get(client) != room:
                 continue
             try:
@@ -76,31 +63,26 @@ class ChatServer:
                 self.remove_client(client)
 
     def remove_client(self, client_socket):
-        """Remove a client and notify others."""
+        """Remove a client and notify its room."""
         if client_socket in self.clients:
             username = self.clients[client_socket]
             print(f"[{datetime.now().strftime('%H:%M:%S')}] {username} left the chat")
-
             payload = json.dumps({
                 'type': 'system',
                 'timestamp': datetime.now().strftime('%H:%M:%S'),
-                'message': f"{username} left the chat"
+                'message': f"{username} left the chat",
             })
             self.broadcast(payload, client_socket)
-
             del self.clients[client_socket]
-            if client_socket in self.addresses:
-                del self.addresses[client_socket]
-            if client_socket in self.client_room:
-                del self.client_room[client_socket]
+            self.addresses.pop(client_socket, None)
+            self.client_room.pop(client_socket, None)
             client_socket.close()
 
     def handle_client(self, client_socket, address):
-        """Handle a single client connection."""
+        """Authenticate, register the room, then relay ciphertext."""
         try:
-            # Authentication
+            # --- Authentication (auth password only; NOT the message secret) ---
             data = client_socket.recv(1024).decode().strip()
-
             if '\n' in data:
                 parts = data.split('\n')
                 username = parts[0].strip()
@@ -109,45 +91,33 @@ class ChatServer:
                 username = data
                 password = client_socket.recv(1024).decode().strip()
 
-            print(f"[AUTH] Username: '{username}', Password: '{password}'")
-
             if hash_password(password) != hash_password(self.password):
-                print(f"[AUTH] Failed for {username}")
+                print(f"[AUTH] Failed for {username!r}")
                 client_socket.send("AUTH_FAIL".encode())
                 client_socket.close()
                 return
 
             client_socket.send("AUTH_OK".encode())
-            print(f"[AUTH] Success for {username}")
 
-            # RSA key-exchange handshake: the client sends its room and RSA
-            # public key; the server replies with the room's shared session
-            # key, encrypted under that public key.
+            # --- Room handshake: client announces its room. No key exchange: the
+            #     server never participates in message-key setup. Bytes received
+            #     past the handshake newline are the first chat frame. ---
             handshake_line, pending = recv_line(client_socket)
             handshake = json.loads(handshake_line)
             room = handshake.get('room', 'general')
-            client_pub = load_public_key(handshake['pubkey'])
-
-            session_key = self.get_room_key(room)
-            encrypted_key = rsa_encrypt(client_pub, session_key)
-            client_socket.send((json.dumps({'session_key': encrypted_key}) + "\n").encode())
-            print(f"[HANDSHAKE] {username} -> room '{room}', session key exchanged via RSA")
 
             self.clients[client_socket] = username
             self.addresses[client_socket] = address
             self.client_room[client_socket] = room
-
             print(f"[CONNECT] {username} from {address[0]}:{address[1]} in room '{room}'")
 
-            welcome_payload = json.dumps({
+            self.broadcast(json.dumps({
                 'type': 'system',
                 'timestamp': datetime.now().strftime('%H:%M:%S'),
-                'message': f"{username} joined the chat"
-            })
-            self.broadcast(welcome_payload, client_socket)
+                'message': f"{username} joined the chat",
+            }), client_socket)
 
-            # Message loop. Any bytes received past the handshake newline are
-            # the first chat message and must be processed before recv().
+            # --- Relay loop: forward the opaque ciphertext, never decrypt it. ---
             while self.running:
                 try:
                     if pending:
@@ -158,15 +128,13 @@ class ChatServer:
                     if not message:
                         break
 
-                    payload = json.dumps({
+                    self.broadcast(json.dumps({
                         'type': 'chat',
                         'timestamp': datetime.now().strftime('%H:%M:%S'),
                         'username': username,
-                        'message': message
-                    })
-                    self.broadcast(payload, client_socket)
-                    print(f"[ENCRYPTED] from {username}")
-
+                        'message': message,   # opaque Fernet token; server can't read it
+                    }), client_socket)
+                    print(f"[RELAY] ciphertext from {username} ({len(message)} bytes)")
                 except Exception as e:
                     print(f"[ERROR] {e}")
                     break
@@ -177,52 +145,46 @@ class ChatServer:
             self.remove_client(client_socket)
 
     def start(self):
-        """Start the chat server."""
+        if self.password == 'chat123':
+            print("[WARN] Using the default auth password 'chat123'. "
+                  "Set --password for anything real.")
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((self.host, self.port))
         server.listen(10)
-
         print(f"""
 ========================================
-  Encrypted Chat Server
+  Encrypted Chat Relay (sees ciphertext only)
 ========================================
   Host: {self.host}:{self.port}
-  Password: {self.password}
-  Clients: {len(self.clients)}
 ========================================
-        """)
-        print("[SERVER] Started. Waiting for connections...")
-        print("[SERVER] Press Ctrl+C to stop\n")
-
+[SERVER] Started. Ctrl+C to stop.
+""")
         while self.running:
             try:
                 client_socket, address = server.accept()
                 print(f"[CONNECTION] from {address[0]}:{address[1]}")
-                thread = threading.Thread(target=self.handle_client, args=(client_socket, address))
-                thread.daemon = True
-                thread.start()
+                t = threading.Thread(target=self.handle_client, args=(client_socket, address))
+                t.daemon = True
+                t.start()
             except KeyboardInterrupt:
                 print("\n[SERVER] Stopping...")
                 self.running = False
                 break
             except Exception as e:
                 print(f"[ERROR] {e}")
-
         server.close()
         print("[SERVER] Stopped.")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Encrypted Chat Server")
+    parser = argparse.ArgumentParser(description="Encrypted Chat Relay")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     parser.add_argument("-p", "--port", type=int, default=5001, help="Port to listen on")
-    parser.add_argument("--password", default="chat123", help="Server password")
-
+    parser.add_argument("--password", default="chat123",
+                        help="AUTH password (server access only; not the message secret)")
     args = parser.parse_args()
-
-    server = ChatServer(args.host, args.port, args.password)
-    server.start()
+    ChatServer(args.host, args.port, args.password).start()
 
 
 if __name__ == "__main__":
