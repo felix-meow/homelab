@@ -2,33 +2,50 @@
   "name": "IDS -> TheHive",
   "nodes": [
     {
-      "parameters": { "httpMethod": "POST", "path": "ids-alert", "responseMode": "onReceived", "options": {} },
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ids-alert",
+        "responseMode": "onReceived",
+        "options": {}
+      },
       "id": "webhook-ids",
       "name": "IDS Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [420, 300],
+      "position": [
+        420,
+        300
+      ],
       "webhookId": "ids-alert"
     },
     {
       "parameters": {
-        "jsCode": "const a = ($input.first().json.body) || $input.first().json;\nconst sevMap = { LOW: 1, MEDIUM: 2, HIGH: 3 };\nconst ports = Array.isArray(a.ports) ? a.ports.join(', ') : (a.ports || '');\nconst payload = {\n  type: 'ids',\n  source: 'homelab-ids',\n  sourceRef: `${a.rule_id || 'IDS'}-${a.timestamp || Date.now()}`,\n  title: `${a.rule_id || ''} ${a.rule_name || 'IDS alert'}`.trim(),\n  description: `Rule: ${a.rule_id} - ${a.rule_name}\\nSeverity: ${a.severity}\\nSource IP: ${a.src_ip || 'N/A'}\\nDest IP: ${a.dst_ip || 'N/A'}\\nPorts: ${ports}\\nCount: ${a.count || 'N/A'}\\nTime: ${a.timestamp || ''}`,\n  severity: sevMap[a.severity] || 2,\n  tags: ['ids', 'homelab', a.rule_id].filter(Boolean)\n};\nreturn [{ json: payload }];"
+        "jsCode": "const a = ($input.first().json.body) || $input.first().json;\nconst sevMap = { LOW: 1, MEDIUM: 2, HIGH: 3 };\nconst ports = Array.isArray(a.ports) ? a.ports.join(', ') : (a.ports || '');\n// Observables: which IP the activity came from (src) and what it targeted (dst).\n// One observable per distinct IP; src and dst can be the same (loopback test).\nconst roles = {};\nfor (const [role, ip] of [['src', a.src_ip], ['dst', a.dst_ip]]) {\n  if (ip) (roles[ip] = roles[ip] || []).push(role);\n}\nconst artifacts = Object.entries(roles).map(([ip, r]) => ({\n  dataType: 'ip',\n  data: ip,\n  message: `${r.includes('src') ? 'Source' : 'Target'} of ${a.rule_id || 'IDS'} ${a.rule_name || 'activity'}`,\n  tags: ['ids', a.rule_id, ...r.map(x => `ids:${x}`)].filter(Boolean)\n}));\nconst payload = {\n  type: 'ids',\n  source: 'homelab-ids',\n  sourceRef: `${a.rule_id || 'IDS'}-${a.timestamp || Date.now()}`,\n  title: `${a.rule_id || ''} ${a.rule_name || 'IDS alert'}`.trim(),\n  description: `Rule: ${a.rule_id} - ${a.rule_name}\\nSeverity: ${a.severity}\\nSource IP: ${a.src_ip || 'N/A'}\\nDest IP: ${a.dst_ip || 'N/A'}\\nPorts: ${ports}\\nCount: ${a.count || 'N/A'}\\nTime: ${a.timestamp || ''}`,\n  severity: sevMap[a.severity] || 2,\n  tags: ['ids', 'homelab', a.rule_id].filter(Boolean),\n  artifacts\n};\nreturn [{ json: payload }];"
       },
       "id": "map-alert",
       "name": "Map to TheHive alert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 300]
+      "position": [
+        660,
+        300
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "http://host.docker.internal:9000/api/alert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
-        "headerParameters": { "parameters": [
-          { "name": "Authorization", "value": "Bearer __PUT_THEHIVE_API_KEY_HERE__" },
-          { "name": "Content-Type", "value": "application/json" }
-        ] },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}",
@@ -38,12 +55,40 @@
       "name": "Create TheHive alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "TheHive ids-bot"
+        }
+      }
     }
   ],
   "connections": {
-    "IDS Webhook": { "main": [ [ { "node": "Map to TheHive alert", "type": "main", "index": 0 } ] ] },
-    "Map to TheHive alert": { "main": [ [ { "node": "Create TheHive alert", "type": "main", "index": 0 } ] ] }
+    "IDS Webhook": {
+      "main": [
+        [
+          {
+            "node": "Map to TheHive alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map to TheHive alert": {
+      "main": [
+        [
+          {
+            "node": "Create TheHive alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
   "settings": {}
 }
