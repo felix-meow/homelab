@@ -102,13 +102,17 @@ python3 ids_file.py -i wlan0 -t 60 -f "tcp or icmp"
 
 ## Testing
 
-Generate traffic for testing:
+Only test against machines you own. The simplest target is your own host:
+run the IDS on the loopback interface and generate traffic to 127.0.0.1 from a
+second terminal.
 
-Port scan:
-nmap -p 1-50 8.8.8.8
+python3 ids_file.py -i lo -t 60
 
-Ping flood:
-ping -i 0.01 -c 100 8.8.8.8
+Port scan (IDS-001):
+nmap -p 1-50 127.0.0.1
+
+Ping flood (IDS-003):
+ping -i 0.2 -c 30 127.0.0.1
 
 ## Report Example (JSON)
 
