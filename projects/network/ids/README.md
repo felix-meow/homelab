@@ -28,23 +28,49 @@ pip install -r requirements.txt
 
 ## Usage
 
-sudo python3 ids_file.py -i <INTERFACE> -t <DURATION>
+python3 ids_file.py -i <INTERFACE> -t <DURATION> [-f "<BPF filter>"]
+
+The IDS does not need to run as root. Give tcpdump capture capabilities once,
+restricted to a dedicated group (the same model Wireshark uses for dumpcap):
+
+```bash
+sudo groupadd -f pcap
+sudo usermod -aG pcap "$USER"
+sudo dpkg-statoverride --update --add root pcap 750 /usr/bin/tcpdump
+sudo setcap cap_net_raw,cap_net_admin+eip /usr/bin/tcpdump
+# then open a new login shell so the group membership applies
+```
+
+`dpkg-statoverride` keeps the owner/mode across tcpdump package upgrades; an
+upgrade does reset the capabilities, so re-run the `setcap` line after one.
+Without this setup, use `--sudo`.
 
 ### Options
 
 | Option | Description |
 |--------|-------------|
-| -i, --interface | Network interface (default: eth0) |
+| -i, --interface | Network interface (default: eth0); must exist in /sys/class/net |
 | -t, --time | Capture duration in seconds (default: 30) |
-| -f, --filter | BPF filter (optional) |
+| -f, --filter | BPF filter expression (optional), e.g. `"tcp or icmp"` |
+| --sudo | Run tcpdump through sudo (only if your user lacks capture capabilities) |
+
+Set `N8N_WEBHOOK_URL` to also forward each alert as JSON to an n8n webhook.
 
 ### Examples
 
 Capture on eth0 for 30 seconds:
-sudo python3 ids_file.py -i eth0 -t 30
+python3 ids_file.py -i eth0 -t 30
 
-Capture on wlan0 for 60 seconds:
-sudo python3 ids_file.py -i wlan0 -t 60
+Capture only TCP/ICMP on wlan0 for 60 seconds:
+python3 ids_file.py -i wlan0 -t 60 -f "tcp or icmp"
+
+### Security notes
+
+- tcpdump is launched from an argv list, never through a shell, so the interface
+  and filter values cannot inject shell commands.
+- The interface must be an existing interface name; the BPF filter is passed
+  after `--`, so it can only be a filter expression, never extra tcpdump options
+  (such as `-z`, which runs a command).
 
 ## Detection Rules
 

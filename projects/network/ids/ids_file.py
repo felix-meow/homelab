@@ -20,6 +20,48 @@ from collections import defaultdict
 # this tool from a sibling folder, e.g. ../ids/ids_file.py).
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Linux interface names: 1-15 chars (IFNAMSIZ - 1), no "/" and no whitespace.
+_IFACE_RE = re.compile(r"[A-Za-z0-9_.:@-]{1,15}")
+
+
+def validate_interface(iface):
+    """Return iface if it names an existing network interface, else raise ValueError.
+
+    The name reaches tcpdump as a single argv element (no shell), but rejecting
+    anything that is not a real interface fails early with a clear message and
+    keeps option-like values (e.g. "-z") out of the command line.
+    """
+    if (
+        not iface
+        or iface in (".", "..")
+        or iface.startswith("-")
+        or not _IFACE_RE.fullmatch(iface)
+        or not os.path.exists(os.path.join("/sys/class/net", iface))
+    ):
+        raise ValueError(f"unknown network interface: {iface!r}")
+    return iface
+
+
+def build_capture_cmd(interface, duration, bpf_filter=None, use_sudo=False):
+    """Build the tcpdump argv list (never a shell string).
+
+    -l line-buffers tcpdump's output so alerts fire in real time instead of at
+    the end of the capture. The BPF filter goes after "--" as one element, so it
+    can only ever be a filter expression, never extra tcpdump options such as
+    "-z <cmd>" (which would run a command with tcpdump's privileges).
+    """
+    cmd = ["timeout"]
+    if use_sudo:
+        # --foreground keeps sudo's password prompt attached to the terminal.
+        cmd.append("--foreground")
+    cmd.append(str(int(duration)))
+    if use_sudo:
+        cmd.append("sudo")
+    cmd += ["tcpdump", "-l", "-n", "-i", interface]
+    if bpf_filter:
+        cmd += ["--", bpf_filter]
+    return cmd
+
 
 class IDS:
     """Intrusion Detection System using tcpdump for packet capture."""
@@ -46,12 +88,13 @@ class IDS:
             "dns_amplification": {"threshold": 10, "time_window": 5, "severity": "MEDIUM"},
         }
 
-    def capture_packets(self, duration=30):
+    def capture_packets(self, duration=30, bpf_filter=None, use_sudo=False):
         """
         Capture packets using tcpdump and analyze them in real-time.
         """
-        cmd = f"timeout {duration} sudo tcpdump -i {self.interface} -n 2>/dev/null"
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, text=True)
+        validate_interface(self.interface)
+        cmd = build_capture_cmd(self.interface, duration, bpf_filter, use_sudo)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
         print(f"[IDS] Monitoring {self.interface} for {duration}s...")
 
@@ -63,6 +106,12 @@ class IDS:
                 print(f"[STATS] Packets: {self.packet_count}, Alerts: {len(self.alerts)}")
 
         process.wait()
+        # timeout(1) exits 124 when the capture window ends; anything else with no
+        # packets means tcpdump itself failed (most often: no capture permission).
+        if process.returncode not in (0, 124) and self.packet_count == 0:
+            err = process.stderr.read().strip() if process.stderr else ""
+            print(f"[IDS] tcpdump failed (exit {process.returncode}): {err[-300:]}")
+            print("[IDS] Capturing needs CAP_NET_RAW: join the 'pcap' group (see README) or use --sudo.")
         print(f"\n[STATS] Captured {self.packet_count} packets")
         print(f"[STATS] Alerts: {len(self.alerts)}")
         self.generate_report()
@@ -300,12 +349,17 @@ def main():
     parser = argparse.ArgumentParser(description="Intrusion Detection System")
     parser.add_argument("-i", "--interface", default="eth0", help="Network interface")
     parser.add_argument("-t", "--time", type=int, default=30, help="Capture duration in seconds")
-    parser.add_argument("-f", "--filter", help="BPF filter (optional)")
+    parser.add_argument("-f", "--filter", help="BPF filter (optional), e.g. \"tcp or icmp\"")
+    parser.add_argument("--sudo", action="store_true",
+                        help="Run tcpdump through sudo (only if your user lacks capture capabilities)")
 
     args = parser.parse_args()
 
     ids = IDS(args.interface)
-    ids.capture_packets(args.time)
+    try:
+        ids.capture_packets(args.time, bpf_filter=args.filter, use_sudo=args.sudo)
+    except ValueError as e:
+        parser.exit(2, f"[IDS] error: {e}\n")
 
 
 if __name__ == "__main__":
