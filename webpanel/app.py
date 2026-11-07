@@ -6,9 +6,16 @@ A local Flask dashboard that showcases and *runs* the homelab security tools
 
 SAFETY / DESIGN
 - Binds to 127.0.0.1 only (localhost). Do not expose this to a network.
+- Every request must carry Host 127.0.0.1:5000 / localhost:5000 (blocks DNS
+  rebinding), and state-changing requests from a browser must come from the
+  panel's own Origin (blocks CSRF from other sites). /api/run only accepts
+  application/json, so a cross-site form/text POST cannot reach it.
 - Commands are built as argv *lists* (never a shell string), from a fixed
-  catalog with typed+validated parameters, so there is no shell-injection
-  surface. Only the tools defined below can be launched.
+  catalog with typed+validated parameters. Only the tools defined below can be
+  launched. String values are still validated (no leading "-", interfaces must
+  exist), because the target tool decides what it does with them.
+- Tools marked needs_root run through `sudo -n`: they fail fast instead of
+  waiting for a password the panel cannot type. Run those from a terminal.
 - The offensive tools keep their own guardrails (ddos refuses public targets,
   mitm needs an explicit ownership ack). This panel does not bypass them.
 """
@@ -33,6 +40,12 @@ if not os.path.exists(PYTHON):
 DEMO_FIM = os.path.join(os.path.dirname(os.path.abspath(__file__)), "demo_fim")
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+PANEL_PORT = 5000
+ALLOWED_HOSTS = {f"127.0.0.1:{PANEL_PORT}", f"localhost:{PANEL_PORT}"}
+ALLOWED_ORIGINS = {f"http://{h}" for h in ALLOWED_HOSTS}
+IFACE_RE = re.compile(r"[A-Za-z0-9_.:@-]{1,15}")  # Linux interface name (IFNAMSIZ - 1)
+MAX_STR_LEN = 4096
 
 # --------------------------------------------------------------------------- #
 # Tool catalog. team: red | blue | recon. Each param: name, flag, type
@@ -144,9 +157,10 @@ CATALOG = [
         "id": "ids", "name": "Intrusion Detection System", "team": "blue",
         "dir": "network/ids", "script": "ids_file.py",
         "desc": "IDS pe tcpdump: port scan, SYN/ICMP flood, brute force, ARP, DNS.",
-        "needs_root": True, "long_running": True,
+        # No root: tcpdump has capture capabilities for the 'pcap' group (see IDS README).
+        "needs_root": False, "long_running": True,
         "params": [
-            {"name": "interface", "flag": "-i", "type": "str", "default": "lo", "label": "Interfata"},
+            {"name": "interface", "flag": "-i", "type": "str", "default": "lo", "label": "Interfata", "validate": "iface"},
             {"name": "time", "flag": "-t", "type": "int", "default": "15", "label": "Durata (s)"},
             {"name": "filter", "flag": "-f", "type": "str", "default": "", "label": "Filtru BPF"},
         ],
@@ -157,7 +171,7 @@ CATALOG = [
         "desc": "Captura live (Scapy): IP/TCP/UDP/ICMP, ARP-spoof, OS fingerprint.",
         "needs_root": True, "long_running": True,
         "params": [
-            {"name": "interface", "flag": "-i", "type": "str", "default": "lo", "required": True, "label": "Interfata"},
+            {"name": "interface", "flag": "-i", "type": "str", "default": "lo", "required": True, "label": "Interfata", "validate": "iface"},
             {"name": "count", "flag": "-c", "type": "int", "default": "10", "label": "Nr pachete"},
             {"name": "filter", "flag": "-f", "type": "str", "default": "", "label": "Filtru BPF"},
         ],
@@ -184,7 +198,7 @@ CATALOG = [
         "params": [
             {"name": "victim", "flag": "-v", "type": "str", "default": "", "required": True, "label": "Victima (IP LAN)"},
             {"name": "gateway", "flag": "-g", "type": "str", "default": "", "required": True, "label": "Gateway"},
-            {"name": "interface", "flag": "-i", "type": "str", "default": "eth0", "required": True, "label": "Interfata"},
+            {"name": "interface", "flag": "-i", "type": "str", "default": "eth0", "required": True, "label": "Interfata", "validate": "iface"},
             {"name": "duration", "flag": "-d", "type": "int", "default": "30", "label": "Durata (s)"},
             {"name": "ack", "flag": "--i-own-this-target", "type": "flag", "default": False, "required": True, "label": "Confirm ca detin/sunt autorizat pe aceasta retea"},
         ],
@@ -216,11 +230,26 @@ RUNS_LOCK = threading.Lock()
 app = Flask(__name__)
 
 
+def validate_str(spec, val):
+    """Reject string values that a target tool could misread. Raises ValueError."""
+    label = spec.get("label", spec["name"])
+    if len(val) > MAX_STR_LEN or "\x00" in val:
+        raise ValueError(f"'{label}' este prea lung sau contine caractere nepermise.")
+    if val.startswith("-"):
+        # The tools parse argv with argparse; a value starting with "-" would be
+        # read as an option.
+        raise ValueError(f"'{label}' nu poate incepe cu '-'.")
+    if spec.get("validate") == "iface":
+        if (val in (".", "..") or not IFACE_RE.fullmatch(val)
+                or not os.path.exists(os.path.join("/sys/class/net", val))):
+            raise ValueError(f"'{label}': interfata necunoscuta ({val}).")
+
+
 def build_argv(tool, raw):
     """Validate params and build the argv list + cwd. Raises ValueError on bad input."""
     argv = []
     if tool.get("needs_root"):
-        argv.append("sudo")
+        argv += ["sudo", "-n"]
     cwd = os.path.join(PROJECTS, tool["dir"])
     argv += [PYTHON, os.path.join(cwd, tool["script"])]
 
@@ -252,7 +281,11 @@ def build_argv(tool, raw):
         elif ptype == "choice":
             if val not in spec["choices"]:
                 raise ValueError(f"'{spec.get('label', name)}' valoare invalida.")
-        # str: passed as a single argv element (no shell), so it is inert.
+        else:
+            # str: one argv element (no shell here), but still validated: the
+            # target tool decides what it does with it (the IDS once put the
+            # interface into a shell command).
+            validate_str(spec, val)
         argv += [flag, val]
 
     return argv, cwd
@@ -280,6 +313,21 @@ def _reader(run_id, proc):
     q.put(None)  # sentinel
 
 
+@app.before_request
+def local_only_guard():
+    # DNS rebinding: a hostile site can make its own domain resolve to 127.0.0.1,
+    # but the browser still sends that domain in Host -> accept only our Host.
+    if request.host not in ALLOWED_HOSTS:
+        return jsonify({"error": "host not allowed"}), 403
+    # CSRF: browsers send Origin on cross-site requests; only the panel's own page
+    # may change state. Non-browser local clients (curl) send no Origin.
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("Origin")
+        if origin is not None and origin not in ALLOWED_ORIGINS:
+            return jsonify({"error": "origin not allowed"}), 403
+    return None
+
+
 @app.route("/")
 def index():
     return render_template("index.html", catalog=CATALOG)
@@ -292,7 +340,13 @@ def api_catalog():
 
 @app.route("/api/run", methods=["POST"])
 def api_run():
-    data = request.get_json(force=True)
+    # Only real JSON: a cross-site page can POST text/plain or form data without
+    # a CORS preflight, but not application/json.
+    if not request.is_json:
+        return jsonify({"error": "Content-Type trebuie sa fie application/json."}), 415
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get("params", {}), dict):
+        return jsonify({"error": "JSON invalid."}), 400
     tool = CATALOG_BY_ID.get(data.get("id"))
     if not tool:
         return jsonify({"error": "Tool necunoscut."}), 404
@@ -349,7 +403,7 @@ def api_stop(run_id):
             pgid = os.getpgid(proc.pid)
             if run.get("needs_root"):
                 # Child runs as root; kill the group via sudo.
-                subprocess.run(["sudo", "kill", "-TERM", "--", f"-{pgid}"], check=False)
+                subprocess.run(["sudo", "-n", "kill", "-TERM", "--", f"-{pgid}"], check=False)
             else:
                 os.killpg(pgid, signal.SIGTERM)
         except ProcessLookupError:
@@ -358,5 +412,5 @@ def api_stop(run_id):
 
 
 if __name__ == "__main__":
-    print("[PANEL] Homelab Control Panel -> http://127.0.0.1:5000  (Ctrl+C to stop)")
-    app.run(host="127.0.0.1", port=5000, threaded=True)
+    print(f"[PANEL] Homelab Control Panel -> http://127.0.0.1:{PANEL_PORT}  (Ctrl+C to stop)")
+    app.run(host="127.0.0.1", port=PANEL_PORT, threaded=True)
