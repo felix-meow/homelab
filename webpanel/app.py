@@ -206,7 +206,7 @@ CATALOG = [
     {
         "id": "encrypted-chat", "name": "Encrypted Chat (server)", "team": "blue",
         "dir": "standalone/encrypted-chat", "script": "server.py",
-        "desc": "Server chat E2E (AES-128/Fernet, handshake RSA). Clientul e CLI.",
+        "desc": "Relay chat E2E (Fernet; cheia ramane pe clienti, serverul vede doar ciphertext). Clientul e CLI.",
         "needs_root": False, "long_running": True,
         "params": [
             {"name": "host", "flag": "--host", "type": "str", "default": "127.0.0.1", "label": "Bind host"},
