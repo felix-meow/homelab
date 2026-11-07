@@ -47,36 +47,42 @@ class ChatServer:
         self.clients = {}        # socket -> username
         self.addresses = {}      # socket -> (ip, port)
         self.client_room = {}    # socket -> room
+        self.lock = threading.Lock()  # guards the three dicts across client threads
         self.running = True
 
-    def broadcast(self, message, sender_socket=None):
-        """Send to clients in the sender's room, except the sender."""
-        room = self.client_room.get(sender_socket)
-        for client in list(self.clients):
-            if client == sender_socket:
-                continue
-            if room is not None and self.client_room.get(client) != room:
-                continue
+    def broadcast(self, message, sender_socket=None, room=None):
+        """Send to clients in the sender's room (or `room`), except the sender."""
+        with self.lock:
+            if room is None:
+                room = self.client_room.get(sender_socket)
+            targets = [c for c in self.clients
+                       if c != sender_socket and (room is None or self.client_room.get(c) == room)]
+        for client in targets:
             try:
                 client.send(message.encode())
             except Exception:
                 self.remove_client(client)
 
     def remove_client(self, client_socket):
-        """Remove a client and notify its room."""
-        if client_socket in self.clients:
-            username = self.clients[client_socket]
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] {username} left the chat")
-            payload = json.dumps({
-                'type': 'system',
-                'timestamp': datetime.now().strftime('%H:%M:%S'),
-                'message': f"{username} left the chat",
-            })
-            self.broadcast(payload, client_socket)
-            del self.clients[client_socket]
+        """Remove a client and notify its room. Safe when two threads race to remove
+        the same client (e.g. a failed broadcast and the client's own handler)."""
+        with self.lock:
+            username = self.clients.pop(client_socket, None)
+            room = self.client_room.pop(client_socket, None)
             self.addresses.pop(client_socket, None)
-            self.client_room.pop(client_socket, None)
+        if username is None:
+            return  # already removed by another thread
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {username} left the chat")
+        payload = json.dumps({
+            'type': 'system',
+            'timestamp': datetime.now().strftime('%H:%M:%S'),
+            'message': f"{username} left the chat",
+        })
+        self.broadcast(payload, client_socket, room=room)
+        try:
             client_socket.close()
+        except OSError:
+            pass
 
     def handle_client(self, client_socket, address):
         """Authenticate, register the room, then relay ciphertext."""
@@ -106,9 +112,10 @@ class ChatServer:
             handshake = json.loads(handshake_line)
             room = handshake.get('room', 'general')
 
-            self.clients[client_socket] = username
-            self.addresses[client_socket] = address
-            self.client_room[client_socket] = room
+            with self.lock:
+                self.clients[client_socket] = username
+                self.addresses[client_socket] = address
+                self.client_room[client_socket] = room
             print(f"[CONNECT] {username} from {address[0]}:{address[1]} in room '{room}'")
 
             self.broadcast(json.dumps({
